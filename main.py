@@ -1,7 +1,7 @@
 from aiohttp import web
 
 from app.settings import config
-from app.vk.accessor_old import VkAccessor
+from app.vk.accessor import VkAccessor
 
 
 def setup_config(application: web.Application) -> None:
