@@ -1,0 +1,6 @@
+aiohttp
+alembic
+gino
+marshmallow
+PyYAML
+SQLAlchemy
