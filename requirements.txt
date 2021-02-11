@@ -4,3 +4,4 @@ gino
 marshmallow
 PyYAML
 SQLAlchemy
+vk-api
