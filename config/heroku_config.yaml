@@ -1,7 +1,7 @@
 common:
   # каждый раз heroku выделяет разные порты,
   # поэтому необходимо вынести это в переменную
-  port: $PORT
+  port: 14337
 vk:
   access-token: $VK_ACCESS_TOKEN
   confirmation-token: $VK_CALLBACK_TOKEN
