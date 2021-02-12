@@ -10,19 +10,12 @@ def setup_config(application: web.Application) -> None:
     application["config"] = config
 
 
-# def setup_routes(application: web.Application) -> None:
-#     from app.vk.routes import setup_routes
-#
-#     setup_routes(application)
-
-
 def setup_accessors(application: web.Application) -> None:
     VkAccessor().setup(application)
 
 
 def setup_app(application: web.Application) -> None:
     setup_config(application)
-    # setup_routes(application)
     setup_accessors(application)
 
     application.on_startup.append(start_background_tasks)
@@ -31,12 +24,12 @@ def setup_app(application: web.Application) -> None:
 
 async def start_background_tasks(app):
     # https://docs.aiohttp.org/en/v3.7.3/web_advanced.html#background-tasks
-    print('Creating vk task')
+    print('Create vk task')
     app['vk_listener'] = asyncio.create_task(app['vk'].listen_to_messages())
 
 
 async def cleanup_background_tasks(app):
-    print('Stopping vk task')
+    print('Stop vk task')
     app['vk_listener'].cancel()
     await app['vk_listener']
 

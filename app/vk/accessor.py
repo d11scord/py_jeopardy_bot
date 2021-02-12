@@ -1,6 +1,6 @@
 from aiohttp import web
 from vk_api import vk_api
-from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
+from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType, VkBotMessageEvent
 from vk_api.utils import get_random_id
 
 
@@ -20,18 +20,22 @@ class VkAccessor:
 
         application["vk"] = self
 
-    async def listen_to_messages(self):
-        print('Hello from longpoll')
+    def listen_to_messages(self):
+        print('Hello from vk bot longpoll')
         vk_session = vk_api.VkApi(token=self.token)
         self.vk = vk_session.get_api()
         self.longpoll = VkBotLongPoll(vk_session, group_id=self.group_id)
 
         for event in self.longpoll.listen():
-            if event.type == VkBotEventType.MESSAGE_NEW:
+            if event.type == VkBotEventType.MESSAGE_NEW and event.obj.text:
                 print('Got message from VK')
-                self.vk.messages.send(
-                    random_id=get_random_id(),
-                    peer_id=event.obj.peer_id,
-                    message=event.obj.text,
-                )
+                self.send_message(event)
+
+    def send_message(self, event: VkBotMessageEvent) -> None:
+        # TODO: add rabbitmq
+        self.vk.messages.send(
+            random_id=get_random_id(),
+            peer_id=event.obj.peer_id,
+            message=event.obj.text,
+        )
 
