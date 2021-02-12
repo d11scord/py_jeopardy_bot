@@ -1,8 +1,0 @@
-build:
-  docker:
-    web: Dockerfile
-release:
-  command:
-    - ./run.sh
-run:
-  web: python myworker.py

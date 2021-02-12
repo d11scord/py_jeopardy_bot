@@ -1,5 +1,6 @@
-import aiohttp
 from aiohttp import web
+from vk_api import vk_api
+from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.utils import get_random_id
 
 
@@ -16,19 +17,17 @@ class VkAccessor:
 
         application["vk"] = self
 
-    async def send_message(self, request) -> None:
-        async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(verify_ssl=False)
-        ) as session:
-            params = {
-                "peer_id": request.object.peer_id,
-                "message": request.object.text,
-                "random_id": get_random_id(),
-                "access_token": self.token,
-                "v": self.v,
-            }
-            async with session.post(
-                "https://api.vk.com/method/messages.send",
-                params=params,
-            ):
-                pass
+    async def listen_to_messages(self):
+        print('Hello from longpoll')
+        vk_session = vk_api.VkApi(token=self.token)
+        vk = vk_session.get_api()
+        longpoll = VkBotLongPoll(vk_session, group_id=self.group_id)
+
+        for event in longpoll.listen():
+            if event.type == VkBotEventType.MESSAGE_NEW:
+                print('Got message from VK')
+                vk.messages.send(
+                    random_id=get_random_id(),
+                    peer_id=event.obj.peer_id,
+                    message=event.obj.text,
+                )
