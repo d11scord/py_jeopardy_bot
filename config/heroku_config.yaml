@@ -4,6 +4,5 @@ common:
   port: $PORT
 vk:
   access-token: $VK_ACCESS_TOKEN
-  confirmation-token: $VK_CALLBACK_TOKEN
   group-id: $VK_GROUP_ID
   v: 5.130
