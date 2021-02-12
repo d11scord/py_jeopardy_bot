@@ -30,6 +30,7 @@ def setup_app(application: web.Application) -> None:
 
 
 async def start_background_tasks(app):
+    # https://docs.aiohttp.org/en/v3.7.3/web_advanced.html#background-tasks
     print('Creating vk task')
     app['vk_listener'] = asyncio.create_task(app['vk'].listen_to_messages())
 
