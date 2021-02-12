@@ -7,5 +7,4 @@ COPY . .
 # подставляем переменные из окружения в подготовленный конфиг
 RUN cat config/heroku_config.yaml | envsubst > config/config.yaml
 #CMD ["./run.sh"]
-RUN chmod +x ./run.sh
-RUN ./run.sh
+RUN chmod +x main.py
