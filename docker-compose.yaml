@@ -3,3 +3,5 @@ services:
   # по названию сервиса heroku определяет, что конкретно надо деплоить
   web:
     build: .
+  command: >
+    bash -c "python main.py"
