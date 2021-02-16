@@ -5,4 +5,7 @@ common:
 vk:
   access-token: $VK_ACCESS_TOKEN
   group-id: $VK_GROUP_ID
-  v: 5.130
+  v: 5.38
+rabbitmq:
+  host: localhost
+  queue_name: vkbot_test3

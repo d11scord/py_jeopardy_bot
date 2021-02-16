@@ -1,4 +1,6 @@
 aiohttp
+aio_pika
+aiojobs
 aiopg
 alembic
 gino
@@ -6,3 +8,4 @@ marshmallow
 PyYAML
 SQLAlchemy
 vk_api
+pika
