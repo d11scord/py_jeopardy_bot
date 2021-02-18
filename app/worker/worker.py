@@ -4,15 +4,18 @@ import json
 from aio_pika import connect, IncomingMessage
 
 from app.settings import config
-from app.vk.accessor import VkAccessor
+from app.vk.accessor import send_message_to_vk
 
 
 async def on_message(message: IncomingMessage):
-    print(" [x] Received message %r" % message)
+    print(" [x] Received message", message)
     event = json.loads(message.body.decode('utf-8'))
-    print("Message body is: %r" % message.body, )
-    # TODO: не работает
-    response = await VkAccessor().send_message(event=event)
+    print("Message body is:", message.body)
+    # TODO: не костыль?
+    response = await send_message_to_vk(
+        event=event, token=config["vk"]['access-token'],
+        v=config["vk"]['v'], group_id=config["vk"]['group-id'],
+    )
     print('response', response)
     message.ack()
 

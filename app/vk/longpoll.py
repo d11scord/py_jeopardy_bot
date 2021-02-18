@@ -4,8 +4,6 @@ from aio_pika import Message, DeliveryMode, connect
 from aiohttp import web
 from vk_api.bot_longpoll import VkBotEventType, VkBotMessageEvent
 
-from app.settings import config
-
 
 class LongPoll:
     def __init__(self):
@@ -17,8 +15,8 @@ class LongPoll:
         self.queue_name = None
 
     def setup(self, application: web.Application):
-        self.url = config["rabbitmq"]["url"]
-        self.queue_name = config["rabbitmq"]["queue_name"]
+        self.url = application["config"]["rabbitmq"]["url"]
+        self.queue_name = application["config"]["rabbitmq"]["queue_name"]
 
         application.on_startup.append(self.on_startup)
 
@@ -40,7 +38,7 @@ class LongPoll:
                 )
                 print(f"Sent message ({event.obj.text}) to queue")
             else:
-                print('Event type', event['type'], event)
+                print('Event type', event.type.value, event)
 
     @staticmethod
     def parse_event(raw_event: VkBotMessageEvent) -> json:
