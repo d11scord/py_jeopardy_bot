@@ -7,5 +7,7 @@ vk:
   group-id: $VK_GROUP_ID
   v: 5.38
 rabbitmq:
-  host: localhost
-  queue_name: vkbot_test3
+  url: amqp://guest:guest@localhost/
+  queue_name: vkbot_test5
+postgres:
+  database_url: postgres://postgres:@localhost/test_db
