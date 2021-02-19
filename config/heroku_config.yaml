@@ -11,3 +11,10 @@ rabbitmq:
   queue_name: vkbot_test5
 postgres:
   database_url: postgres://postgres:@localhost/test_db
+  require_ssl: false
+database:
+  host: localhost
+  port: 5432
+  username: $PG_USER
+  password: $PG_PASSWORD
+  name: $DB

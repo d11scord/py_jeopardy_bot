@@ -1,5 +1,6 @@
 aiohttp
 aio_pika
+aiohttp_apispec
 aiopg
 alembic
 gino
