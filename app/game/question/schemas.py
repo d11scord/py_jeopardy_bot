@@ -17,6 +17,9 @@ class QuestionDeleteSchema(Schema):
     id = fields.Int(required=True)
 
 
+QuestionGetSchema = QuestionDeleteSchema
+
+
 class QuestionListSchema(Schema):
     limit = fields.Int(missing=20, validate=Range(min=1, max=100))
     offset = fields.Int(missing=0, validate=Range(min=0))

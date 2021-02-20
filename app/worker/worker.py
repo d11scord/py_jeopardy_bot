@@ -3,16 +3,18 @@ import json
 
 from aio_pika import connect, IncomingMessage
 
+from app.game.bot.bot import JeopardyBot
 from app.settings import config
-from app.vk.accessor import send_message_to_vk
+
+
+bot = JeopardyBot()
 
 
 async def on_message(message: IncomingMessage):
     print(" [x] Received message")
     event = json.loads(message.body.decode('utf-8'))
     print("Message body is:", message.body)
-    response = await send_message_to_vk(event=event)
-    print('VK response', response)
+    await bot.check_message(event)
     message.ack()
 
 

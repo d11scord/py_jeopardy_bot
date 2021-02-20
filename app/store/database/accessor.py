@@ -5,15 +5,7 @@ from aiohttp import web
 
 class PostgresAccessor:
     def __init__(self) -> None:
-        from app.game.session.models import GameSession
-        from app.game.user.models import User
-        from app.game.question.models import Question
-        from app.game.answer.models import Answer
 
-        self.session = GameSession
-        self.user = User
-        self.question = Question
-        self.answer = Answer
         self.db = None
 
     def setup(self, application: web.Application) -> None:

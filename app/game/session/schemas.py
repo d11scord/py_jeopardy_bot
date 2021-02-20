@@ -15,6 +15,10 @@ class GameSessionCreateSchema(Schema):
     questions = fields.List(fields.Int)
 
 
+class GameSessionDeleteSchema(Schema):
+    id = fields.Int(required=True)
+
+
 class GameSessionListSchema(Schema):
     limit = fields.Int(missing=20, validate=Range(min=1, max=100))
     offset = fields.Int(missing=0, validate=Range(min=0))

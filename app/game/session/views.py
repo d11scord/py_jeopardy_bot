@@ -10,7 +10,12 @@ from aiohttp_apispec import (
 from sqlalchemy import and_
 
 from app.game.session.models import GameSession
-from app.game.session.schemas import GameSessionSchema, GameSessionCreateSchema, GameSessionListSchema
+from app.game.session.schemas import (
+    GameSessionSchema,
+    GameSessionCreateSchema,
+    GameSessionListSchema,
+    GameSessionDeleteSchema,
+)
 
 
 class CreateGameSessionView(web.View):
@@ -27,6 +32,18 @@ class CreateGameSessionView(web.View):
             is_finished=False,
         )
         return web.json_response(GameSessionSchema().dump(session))
+
+
+class DeleteGameSessionView(web.View):
+    @docs(tags=["game"], summary="Delete game session")
+    @json_schema(GameSessionDeleteSchema)
+    async def delete(self):
+        await (
+            GameSession.delete
+            .where(GameSession.id == self.request['json']["id"])
+            .gino.status()
+        )
+        return web.json_response({}, status=204)
 
 
 class GameSessionListView(web.View):

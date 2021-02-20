@@ -6,5 +6,5 @@ class Answer(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
     question_id = db.Column(db.Integer(), db.ForeignKey("questions.id"), nullable=False)
-    title = db.Column(db.String(45), nullable=False)
+    title = db.Column(db.String(), nullable=False)
     is_right = db.Column(db.Boolean(), nullable=False)

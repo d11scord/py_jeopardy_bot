@@ -13,4 +13,9 @@ class GameSession(db.Model):
     is_finished = db.Column(db.Boolean(), nullable=False)
 
 
+class SessionScores(db.Model):
+    __tablename__ = "session_scores"
 
+    session_id = db.Column(db.Integer(), db.ForeignKey("game_sessions.id", ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer(), db.ForeignKey("users.user_id", ondelete='CASCADE'), nullable=False)
+    score = db.Column(db.Integer(), nullable=False)

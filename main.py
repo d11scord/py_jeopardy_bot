@@ -37,7 +37,7 @@ def setup_external_libraries(application: web.Application) -> None:
         title="Своя игра бот. Документация",
         version="v1",
         url="/swagger.json",
-        swagger_path="/swagger",
+        swagger_path="/",
     )
 
 

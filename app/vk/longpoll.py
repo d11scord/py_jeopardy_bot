@@ -6,6 +6,7 @@ from vk_api.bot_longpoll import VkBotEventType, VkBotMessageEvent
 
 from app.settings import config
 from app.vk.accessor import create_vk_connection
+from app.vk.utils import bot_call
 from app.worker.worker import connect_to_queue
 
 
@@ -34,7 +35,9 @@ async def main(loop):
 
     longpoll = create_vk_connection()
     for event in longpoll.listen():
-        if event.type == VkBotEventType.MESSAGE_NEW and event.obj.text:
+        message_text = event.obj.text
+        if event.type == VkBotEventType.MESSAGE_NEW and message_text \
+                and bot_call in message_text:
             await send_message_to_queue(
                 channel, parse_event(event)
             )

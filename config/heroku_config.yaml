@@ -3,8 +3,8 @@ common:
   # поэтому необходимо вынести это в переменную
   port: $PORT
 vk:
-  access-token: $VK_ACCESS_TOKEN
-  group-id: $VK_GROUP_ID
+  access_token: $VK_ACCESS_TOKEN
+  group_id: $VK_GROUP_ID
   v: 5.38
 rabbitmq:
   url: amqp://guest:guest@localhost/
