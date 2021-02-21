@@ -1,7 +1,5 @@
 import asyncio
 from enum import Enum
-from pprint import pprint
-from typing import Optional
 
 from sqlalchemy import func, and_
 
@@ -30,7 +28,8 @@ class Commands(Enum):
 class JeopardyBot:
     def __init__(self):
 
-        self.max_question = 5
+        self.delay = 10  # seconds
+        self.max_question = 3
         # todo: костыль?
         asyncio.get_event_loop().run_until_complete(self.connect())
 
@@ -43,8 +42,8 @@ class JeopardyBot:
 
         game = await (
             GameSession.query
-                .where(and_(*conditions))
-                .gino.first()
+            .where(and_(*conditions))
+            .gino.first()
         )
         if game:
             return game
@@ -57,13 +56,13 @@ class JeopardyBot:
         await db.set_bind(config['postgres']['database_url'])
         await db.gino.create_all()
 
-    async def start_game(self, message) -> GameSession:
+    async def create_game(self, message) -> GameSession:
         # рандомим вопросы для игры и создаём новую сессию
         questions = await (
             Question.query
-                .order_by(func.random())
-                .limit(self.max_question)
-                .gino.all()
+            .order_by(func.random())
+            .limit(self.max_question)
+            .gino.all()
         )
         # берём айдишники вопросов
         questions = QuestionGetSchema(many=True).dump(questions)
@@ -105,74 +104,183 @@ class JeopardyBot:
         return new_game_session
 
     async def play_game(self, game: GameSession):
-        question_ids = game.questions
+        current_question_idx = game.last_question_id
 
-        questions = list()
+        await self.ask_question(game.id, current_question_idx)
 
-        for q_id in question_ids:
-            question = await Question.get(q_id)
-            question = QuestionSchema().dump(question)
-            answers = await Answer.load().query.where(Answer.question_id == q_id).gino.all()
+    async def ask_question(self, game_id: int, question_idx: int):
+        game = await GameSession.get(game_id)
+        message = {
+            'peer_id': game.chat_id,
+        }
+
+        if game.last_question_id == self.max_question:
+            await game.update(is_finished=True).apply()
+            message['text'] = 'Игра окончена.'
+            await send_message_to_vk(event=message)
+            await self.game_info()
+
+        else:
+            question = dict()
+            question_id = game.questions[question_idx]
+            qstn = await Question.get(question_id)
+            qstn = QuestionSchema().dump(qstn)
+            answers = await (
+                Answer.load()
+                .query.where(Answer.question_id == question_id)
+                .gino.all()
+            )
             answers = AnswerCreateSchema(many=True).dump(answers)
-            questions.append({
-                'question': question['title'],
-                'theme': question['theme'],
+
+            question.update({
+                'question': qstn['title'],
+                'theme': qstn['theme'],
                 'answers': answers,
             })
 
-        template = \
-            """
-            Тема: {theme}
-            {question}
-            
-            a. {}
-            b. {}
-            c. {}
-            d. {}
-            """
-        message = dict()
-        message.update({'peer_id': game.chat_id})
-        for question in questions:
-            answers = [a['title'] for a in question['answers']]
-            message_text = template.format(
-                theme=question['theme'],
-                question=question['question'],
-                *answers,
-            )
-            message.update({'text': message_text})
+            template = \
+                """
+                Тема: {theme}
+                {question}
+    
+                a. {}
+                b. {}
+                c. {}
+                d. {}
+                """
+
+            message.update({
+                'text': template.format(
+                    theme=question['theme'],
+                    question=question['question'],
+                    *answers,
+                )
+            })
             await send_message_to_vk(event=message)
-            # здесь ждём минуту/ответа
 
-    def stop_game(self):
+            asyncio.create_task(self.task(game_id, question_idx))  # -------------------------------------------------!
+
+    async def receive_answer(self, chat_id: int, message_text: str):
+        """
+        если есть игра:
+            если ответ правильный:
+                начислить очки
+                ask_question(ид_сессии, номер следующего вопроса)
+            иначе:
+                снять очки
+        иначе:
+            отвечаем на глупость
+        """
+        # todo: check duplicates
+        message = dict()
+        message['peer_id'] = chat_id
+
+        game = await self.find_unfinished_game(chat_id)
+        if game:
+            question_id = game.questions[game.last_question_id]
+            answers = await (
+                Answer.load()
+                .query.where(Answer.question_id == question_id)
+                .gino.all()
+            )
+            answers = AnswerCreateSchema(many=True).dump(answers)
+            right_answer = ''
+            for answer in answers:
+                if answer['is_right']:
+                    right_answer = answer['title']
+                    break
+
+            if message_text == right_answer:
+                # todo
+                # session_scores = await (
+                #     SessionScores.load()
+                #     .query.where(Answer.question_id == question_id)
+                #     .gino.all()
+                # )
+                message['text'] = 'Ответ правильный.'
+                await send_message_to_vk(event=message)
+
+                await game.update(last_question_id=game.last_question_id+1).apply()
+                await self.ask_question(game.id, game.last_question_id)
+            else:
+                message['text'] = 'Ответ неправильный.'
+                await send_message_to_vk(event=message)
+        else:
+            message['text'] = "Не понял, о чём ты. Давай ещё раз"
+            await send_message_to_vk(message)
+
+    async def task(self, game_id: int, question_idx: int):
+        await asyncio.sleep(delay=self.delay)
+
+        game = await GameSession.get(game_id)
+        if game.last_question_id == question_idx:
+            # отправляем в беседу правильный ответ
+            answers = await (
+                Answer.load()
+                .query.where(Answer.question_id == game.questions[question_idx])
+                .gino.all()
+            )
+            answers = AnswerCreateSchema(many=True).dump(answers)
+            right_answer = ''
+            for answer in answers:
+                if answer['is_right']:
+                    right_answer = answer['title']
+                    break
+            message = dict()
+            message['peer_id'] = game.chat_id
+            message['text'] = \
+                f'Никто не ответил на вопрос. Правильный ответ:' \
+                f'\n{right_answer}'
+            await send_message_to_vk(event=message)
+
+            await game.update(last_question_id=game.last_question_id + 1).apply()
+            await self.ask_question(game_id, game.last_question_id)
+
+    async def stop_game(self):
         pass
 
-    def game_info(self):
+    async def game_info(self):
         pass
 
-    def bot_info(self):
+    async def bot_info(self):
         pass
 
     async def check_message(self, message: dict) -> None:
+        """
+        Алгоритм работы бота:
+
+        Есть методы play_game, ask_question, receive_answer. play_game отвечает только за старт игры.
+        Тут задаём первый вопрос (или не первый, если игра продолжается).
+
+        Вопросы все задаются через метод ask_question. В этот метод передается id игры и индекс вопроса.
+        Вопрос с вариантами ответа отсылается через vk accessor и заводится таска.
+        В этой таске ждём минуту для ответа и тут есть два варианта:
+        - Если last_question_id в сессии равен номеру вопроса этой таски, это значит,
+          что на вопрос не был дан ответ и, следовательно, следующий вопрос не был задан.
+          Поэтому last_question_id не обновился. В этом случае в беседу высылается правильный ответ и
+          вызывается ask_question, который задаст следующий вопрос.
+        - Второй вариант это когда номера вопросов не совпадают.
+          Это значит, что уже был задан следующий вопрос и функция завершает работу.
+
+        Теперь метод receive_answer. Он получает id игры и ответ на вопрос.
+        Проверяет ответ на правильность и начисляет/снимает очки.
+        Если был получен правильный ответ, вызывается ask_question для следующего вопроса.
+        Если это был последний вопрос, отсылается сообщение о завершении игры и is_finished ставится в True.
+        """
         print('check_message from bot')
 
         message_text = message['text'][len(bot_call) + 1:]
         chat_id = message['peer_id']
         if message_text == Commands.start_game.value:
             game = await self.find_unfinished_game(chat_id)
-            if game:
-                await self.play_game(game)
-
-            else:
-                game = await self.start_game(message)
-                await self.play_game(game)
+            if not game:
+                game = await self.create_game(message)
+            await self.play_game(game)
         elif message_text == Commands.stop_game.value:
-            self.stop_game()
+            await self.stop_game()
         elif message_text == Commands.game_info.value:
-            self.game_info()
+            await self.game_info()
         elif message_text == Commands.bot_info.value:
-            self.bot_info()
-        elif message_text in ('a', 'b', 'c', 'd'):
-            pass
+            await self.bot_info()
         else:
-            message['text'] = "йА тебя не панимаю"
-            await send_message_to_vk(message)
+            await self.receive_answer(chat_id, message_text)
