@@ -30,18 +30,6 @@ async def send_message_to_vk(
         message=message,
         keyboard=keyboard,
     )
-    # async with aiohttp.ClientSession() as session:
-    #     async with session.get(
-    #         url=f"https://api.vk.com/method/"
-    #             f"messages.send?"
-    #             f"peer_id={peer_id}&"
-    #             f"message={message}&"
-    #             f"access_token={token}&"
-    #             f"v={v}&"
-    #             f"group_id={group_id}",
-    #     ) as resp:
-    #         response = await resp.json()
-    # return response
 
 
 async def get_conversation_members(peer_id: int) -> dict:

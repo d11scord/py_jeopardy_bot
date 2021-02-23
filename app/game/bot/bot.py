@@ -178,7 +178,8 @@ class JeopardyBot:
         await asyncio.sleep(delay=self.delay)
 
         game = await GameSession.get(game_id)
-
+        if game.is_finished:
+            return
         # если никто не ответил на вопрос
         if game.last_question_id == question_idx:
             # отправляем в беседу правильный ответ
@@ -232,7 +233,7 @@ class JeopardyBot:
                 ))
                 .gino.first()
             )
-            result += f"\n{member['first_name']} {member['last_name']} - {session_score.score}"
+            result += f"\n{member['first_name']} {member['last_name']}: {session_score.score}"
         await send_message_to_vk(chat_id, result)
 
     @staticmethod

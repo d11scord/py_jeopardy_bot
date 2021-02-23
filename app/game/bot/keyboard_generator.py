@@ -40,6 +40,3 @@ def generate_keyboard(answers: list) -> VkKeyboard:
             payload={"type": "text", "answer": answer}
         )
     return keyboard_answers
-
-
-
