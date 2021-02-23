@@ -3,6 +3,7 @@ from enum import Enum
 
 from sqlalchemy import and_
 
+from app.game.bot.keyboard_generator import generate_keyboard
 from app.game.bot.utils import (
     find_unfinished_game,
     generate_questions,
@@ -22,11 +23,11 @@ from app.store.database.models import (
 
 
 class Commands(Enum):
-    start_game = ['начать игру']
-    stop_game = ['завершить игру']
-    game_info = ['информация об игре']
-    bot_info = ['инфо']
-    my_scores = ['мои очки']
+    start_game = ['Начать игру']
+    stop_game = ['Завершить игру']
+    game_info = ['Об игре']
+    bot_info = ['О боте']
+    my_scores = ['Мои очки']
 
 
 class JeopardyBot:
@@ -124,7 +125,9 @@ class JeopardyBot:
                 *format_answers(answers)
             )
 
-            await send_message_to_vk(game.chat_id, message=message)
+            keyboard = generate_keyboard(format_answers(answers))
+            await send_message_to_vk(
+                game.chat_id, message, keyboard.get_keyboard())
 
             asyncio.create_task(self.task(game_id, question_idx))  # -------------------------------------------------!
 
@@ -296,5 +299,8 @@ class JeopardyBot:
             await self.bot_info(chat_id)
         elif message_text in Commands.my_scores.value:
             await self.personal_score(chat_id, user_id)
+        elif message['answer'] is not None:
+            await self.receive_answer(chat_id, user_id, message['answer'])
         else:
-            await self.receive_answer(chat_id, user_id, message_text)
+            message = "Не понял, о чём ты. Давай ещё раз."
+            await send_message_to_vk(chat_id, message)
