@@ -1,10 +1,15 @@
 import asyncio
 from enum import Enum
 
-from sqlalchemy import func, and_
+from sqlalchemy import and_
 
-from app.game.answer.schemas import AnswerCreateSchema
-from app.game.question.schemas import QuestionGetSchema, QuestionSchema
+from app.game.bot.utils import (
+    find_unfinished_game,
+    generate_questions,
+    get_question_by_id,
+    get_answers_by_question_id,
+    format_answers, get_user_scores, get_game_scores,
+)
 from app.settings import config
 from app.vk.accessor import send_message_to_vk, get_conversation_members
 from app.vk.utils import bot_call
@@ -13,41 +18,37 @@ from app.store.database.models import (
     GameSession,
     SessionScores,
     User,
-    Question,
-    Answer,
 )
 
 
 class Commands(Enum):
-    start_game = 'начать игру'
-    stop_game = 'остановить игру'
-    game_info = 'информация об игре'
-    bot_info = 'список команд'
+    start_game = ['начать игру']
+    stop_game = ['завершить игру']
+    game_info = ['информация об игре']
+    bot_info = ['инфо']
+    my_scores = ['мои очки']
 
 
 class JeopardyBot:
     def __init__(self):
 
-        self.delay = 10  # seconds
+        self.score = 100  # баллы за правильный ответ
+        self.delay = 60  # seconds
         self.max_question = 3
+
+        self.template = \
+            """
+            Тема: {theme}
+            {question}
+
+            a. {}
+            b. {}
+            c. {}
+            d. {}
+            """
+
         # todo: костыль?
         asyncio.get_event_loop().run_until_complete(self.connect())
-
-    @staticmethod
-    async def find_unfinished_game(chat_id):
-        conditions = list()
-
-        conditions.append(GameSession.chat_id == chat_id)
-        conditions.append(GameSession.is_finished == False)
-
-        game = await (
-            GameSession.query
-            .where(and_(*conditions))
-            .gino.first()
-        )
-        if game:
-            return game
-        return None
 
     @staticmethod
     async def connect():
@@ -56,27 +57,20 @@ class JeopardyBot:
         await db.set_bind(config['postgres']['database_url'])
         await db.gino.create_all()
 
-    async def create_game(self, message) -> GameSession:
+    async def create_game(self, peer_id: int) -> GameSession:
         # рандомим вопросы для игры и создаём новую сессию
-        questions = await (
-            Question.query
-            .order_by(func.random())
-            .limit(self.max_question)
-            .gino.all()
-        )
+        questions = await generate_questions(self.max_question)
         # берём айдишники вопросов
-        questions = QuestionGetSchema(many=True).dump(questions)
-        questions = [q['id'] for q in questions]
+        questions = [q.id for q in questions]
         new_game_session = await GameSession.create(
-            chat_id=message["peer_id"],
+            chat_id=peer_id,
             questions=questions,
             last_question_id=0,
             is_finished=False,
         )
-
         # создаём юзера, если его нет ...
         users = list()
-        response = await get_conversation_members(message)
+        response = await get_conversation_members(peer_id)
         members = response['response']['profiles']
 
         for member in members:
@@ -98,9 +92,8 @@ class JeopardyBot:
                 score=0,
             )
 
-        message['text'] = f"Ок, начинаем сессию номер {new_game_session.id}."
-        await send_message_to_vk(event=message)
-
+        message = f"Ок, начинаем сессию номер {new_game_session.id}."
+        await send_message_to_vk(peer_id, message=message)
         return new_game_session
 
     async def play_game(self, game: GameSession):
@@ -110,57 +103,32 @@ class JeopardyBot:
 
     async def ask_question(self, game_id: int, question_idx: int):
         game = await GameSession.get(game_id)
-        message = {
-            'peer_id': game.chat_id,
-        }
 
         if game.last_question_id == self.max_question:
-            await game.update(is_finished=True).apply()
-            message['text'] = 'Игра окончена.'
-            await send_message_to_vk(event=message)
-            await self.game_info()
-
+            await self.stop_game(game)
         else:
-            question = dict()
             question_id = game.questions[question_idx]
-            qstn = await Question.get(question_id)
-            qstn = QuestionSchema().dump(qstn)
-            answers = await (
-                Answer.load()
-                .query.where(Answer.question_id == question_id)
-                .gino.all()
-            )
-            answers = AnswerCreateSchema(many=True).dump(answers)
+            question = await get_question_by_id(question_id)
 
-            question.update({
-                'question': qstn['title'],
-                'theme': qstn['theme'],
+            answers = await get_answers_by_question_id(question_id)
+
+            formatted_question = {
+                'question': question.title,
+                'theme': question.theme,
                 'answers': answers,
-            })
+            }
 
-            template = \
-                """
-                Тема: {theme}
-                {question}
-    
-                a. {}
-                b. {}
-                c. {}
-                d. {}
-                """
+            message = self.template.format(
+                theme=formatted_question['theme'],
+                question=formatted_question['question'],
+                *format_answers(answers)
+            )
 
-            message.update({
-                'text': template.format(
-                    theme=question['theme'],
-                    question=question['question'],
-                    *answers,
-                )
-            })
-            await send_message_to_vk(event=message)
+            await send_message_to_vk(game.chat_id, message=message)
 
             asyncio.create_task(self.task(game_id, question_idx))  # -------------------------------------------------!
 
-    async def receive_answer(self, chat_id: int, message_text: str):
+    async def receive_answer(self, chat_id: int, user_id: int, message_text: str):
         """
         если есть игра:
             если ответ правильный:
@@ -171,79 +139,117 @@ class JeopardyBot:
         иначе:
             отвечаем на глупость
         """
-        # todo: check duplicates
-        message = dict()
-        message['peer_id'] = chat_id
 
-        game = await self.find_unfinished_game(chat_id)
+        game = await find_unfinished_game(chat_id)
         if game:
+            user = await User.query.where(User.user_id == user_id).gino.first()
+
             question_id = game.questions[game.last_question_id]
-            answers = await (
-                Answer.load()
-                .query.where(Answer.question_id == question_id)
-                .gino.all()
-            )
-            answers = AnswerCreateSchema(many=True).dump(answers)
+            answers = await get_answers_by_question_id(question_id)
             right_answer = ''
             for answer in answers:
-                if answer['is_right']:
-                    right_answer = answer['title']
+                if answer.is_right:
+                    right_answer = answer.title
                     break
 
-            if message_text == right_answer:
-                # todo
-                # session_scores = await (
-                #     SessionScores.load()
-                #     .query.where(Answer.question_id == question_id)
-                #     .gino.all()
-                # )
-                message['text'] = 'Ответ правильный.'
-                await send_message_to_vk(event=message)
+            session_scores = await get_user_scores(game.id, user_id)
 
+            if message_text == right_answer:
+                update_score = session_scores.score+self.score
+                await session_scores.update(score=update_score).apply()
+                message = f'Ответ правильный. {user.firstname} {user.lastname} получает {self.score} очков.'
+                await send_message_to_vk(chat_id, message)
                 await game.update(last_question_id=game.last_question_id+1).apply()
                 await self.ask_question(game.id, game.last_question_id)
             else:
-                message['text'] = 'Ответ неправильный.'
-                await send_message_to_vk(event=message)
+                update_score = session_scores.score - self.score
+                await session_scores.update(score=update_score).apply()
+                message = f'Ответ неправильный. {user.firstname} {user.lastname}, лови минус {self.score} очков.'
+                await send_message_to_vk(chat_id, message)
         else:
-            message['text'] = "Не понял, о чём ты. Давай ещё раз"
-            await send_message_to_vk(message)
+            message = "Не понял, о чём ты. Давай ещё раз."
+            await send_message_to_vk(chat_id, message)
 
     async def task(self, game_id: int, question_idx: int):
+        # время на ответ
         await asyncio.sleep(delay=self.delay)
 
         game = await GameSession.get(game_id)
+
+        # если никто не ответил на вопрос
         if game.last_question_id == question_idx:
             # отправляем в беседу правильный ответ
-            answers = await (
-                Answer.load()
-                .query.where(Answer.question_id == game.questions[question_idx])
-                .gino.all()
+            answers = await get_answers_by_question_id(
+                game.questions[question_idx]
             )
-            answers = AnswerCreateSchema(many=True).dump(answers)
+
             right_answer = ''
             for answer in answers:
-                if answer['is_right']:
-                    right_answer = answer['title']
+                if answer.is_right:
+                    right_answer = answer.title
                     break
-            message = dict()
-            message['peer_id'] = game.chat_id
-            message['text'] = \
+
+            message = \
                 f'Никто не ответил на вопрос. Правильный ответ:' \
                 f'\n{right_answer}'
-            await send_message_to_vk(event=message)
 
-            await game.update(last_question_id=game.last_question_id + 1).apply()
+            await send_message_to_vk(game.chat_id, message)
+            await game.update(last_question_id=game.last_question_id+1).apply()
             await self.ask_question(game_id, game.last_question_id)
 
-    async def stop_game(self):
-        pass
+    async def stop_game(self, game: GameSession):
+        # заканчиваем игру
+        await game.update(is_finished=True).apply()
+        await send_message_to_vk(game.chat_id, message='Игра окончена.')
+        await self.game_info(game.chat_id)
+        # обновляем глобальные очки пользователей
+        session_scores = await get_game_scores(game.id)
+        for user_score in session_scores:
+            user = await User.get(user_score.user_id)
+            new_score = user.score + user_score.score
+            await user.update(score=new_score).apply()
 
-    async def game_info(self):
-        pass
+    @staticmethod
+    async def game_info(chat_id):
+        game = await (
+            GameSession.query
+            .where(GameSession.chat_id == chat_id)
+            .order_by(GameSession.id.desc())
+            .gino.first()
+        )
+        response = await get_conversation_members(chat_id)
+        members = response['response']['profiles']
+        result = f"Игра № {game.id}"
+        for member in members:
+            session_score = await (
+                SessionScores.load()
+                .query.where(and_(
+                    (SessionScores.session_id == game.id),
+                    (SessionScores.user_id == member['id'])
+                ))
+                .gino.first()
+            )
+            result += f"\n{member['first_name']} {member['last_name']} - {session_score.score}"
+        await send_message_to_vk(chat_id, result)
 
-    async def bot_info(self):
-        pass
+    @staticmethod
+    async def bot_info(chat_id: int):
+        bot_name = f"@{config['vk']['bot_name']}"
+        message = \
+        f"""
+        Привет. Я СвояИгра Бот. Умею играть в "Свою Игру".
+        Ко мне обращайся только через тэг {bot_name}. Другие сообщения я не читаю.
+        Для начала игры добавь меня в беседу и напиши "{bot_name} {'/'.join(Commands.start_game.value)}".
+        Далее правила простые — я задаю вопрос, вы отвечаете. Кто первым правильно ответит на вопрос, получит на свой счёт очки. Если отвечаешь неправильно, очки с твоего счёта списываются и ты теряешь право отвечачть на этот вопрос. Если за 1 минуту никто не ответит на вопрос, я дам вам правильный ответ и задам следующий. Игра состоит из 10 вопросов. Победит тот, кто наберёт наибольшее количество очков.
+        Для досрочного завершения игры напиши "{bot_name} {'/'.join(Commands.stop_game.value)}". Для получения ифнормации о текущей или последней игре напиши "{bot_name} {'/'.join(Commands.start_game.value)}". Если хочешь посмотреть на промежуточные баллы, пиши "{bot_name} {' ,'.join(Commands.bot_info.value)}" Общее количество твоих баллов — "{bot_name} {'/'.join(Commands.my_scores.value)}".
+        """
+        await send_message_to_vk(chat_id, message)
+
+    @staticmethod
+    async def personal_score(peer_id: int, user_id: int):
+        user = await User.get(user_id)
+        message = f'{user.firstname}, всего у тебя {user.score} очков.'
+        await send_message_to_vk(peer_id, message)
 
     async def check_message(self, message: dict) -> None:
         """
@@ -270,17 +276,25 @@ class JeopardyBot:
         print('check_message from bot')
 
         message_text = message['text'][len(bot_call) + 1:]
+        user_id = message['from_id']
         chat_id = message['peer_id']
-        if message_text == Commands.start_game.value:
-            game = await self.find_unfinished_game(chat_id)
+
+        if message_text in Commands.start_game.value:
+            game = await find_unfinished_game(chat_id)
             if not game:
-                game = await self.create_game(message)
+                game = await self.create_game(chat_id)
             await self.play_game(game)
-        elif message_text == Commands.stop_game.value:
-            await self.stop_game()
-        elif message_text == Commands.game_info.value:
-            await self.game_info()
-        elif message_text == Commands.bot_info.value:
-            await self.bot_info()
+        elif message_text in Commands.stop_game.value:
+            game = await find_unfinished_game(chat_id)
+            if game:
+                await self.stop_game(game)
+            else:
+                await send_message_to_vk(chat_id, 'Нет незавершённой игры.')
+        elif message_text in Commands.game_info.value:
+            await self.game_info(chat_id)
+        elif message_text in Commands.bot_info.value:
+            await self.bot_info(chat_id)
+        elif message_text in Commands.my_scores.value:
+            await self.personal_score(chat_id, user_id)
         else:
-            await self.receive_answer(chat_id, message_text)
+            await self.receive_answer(chat_id, user_id, message_text)

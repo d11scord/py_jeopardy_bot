@@ -36,11 +36,17 @@ async def main(loop):
     longpoll = create_vk_connection()
     for event in longpoll.listen():
         message_text = event.obj.text
-        if event.type == VkBotEventType.MESSAGE_NEW and message_text \
-                and bot_call in message_text:
-            await send_message_to_queue(
-                channel, parse_event(event)
-            )
+        if (event.type == VkBotEventType.MESSAGE_NEW
+            and message_text
+            and bot_call in message_text
+        ):
+            try:
+                await send_message_to_queue(
+                    channel, parse_event(event)
+                )
+            except ConnectionResetError as e:
+                print(e)
+                channel, queue = await connect_to_queue(loop)
             print(f"Sent message ({event.obj.text}) to queue")
         else:
             print('Event type', event.type.value, event)
