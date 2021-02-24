@@ -23,3 +23,15 @@ class GameSessionListSchema(Schema):
     limit = fields.Int(missing=20, validate=Range(min=1, max=100))
     offset = fields.Int(missing=0, validate=Range(min=0))
     chat_id = fields.Int()
+
+
+class SessionScoresSchema(Schema):
+    id = fields.Int()
+    session_id = fields.Int()
+    user_id = fields.Int()
+    score = fields.Int()
+
+
+class SessionScoresListSchema(Schema):
+    limit = fields.Int(missing=20, validate=Range(min=1, max=100))
+    offset = fields.Int(missing=0, validate=Range(min=0))

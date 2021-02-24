@@ -45,7 +45,9 @@ def setup_logging(_: web.Application) -> None:
     logging.basicConfig(level=logging.INFO)
 
 
-def setup_app(application: web.Application) -> None:
+def create_app() -> web.Application:
+    application = web.Application()
+
     setup_config(application)
     setup_accessors(application)
     setup_middlewares(application)
@@ -53,10 +55,10 @@ def setup_app(application: web.Application) -> None:
     setup_external_libraries(application)
     # setup_logging(application)
 
+    return application
 
-app = web.Application()
 
 if __name__ == "__main__":
-    setup_app(app)
+    app = create_app()
     print('Run app')
     web.run_app(app, port=config["common"]["port"])

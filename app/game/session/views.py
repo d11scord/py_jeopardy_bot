@@ -9,12 +9,14 @@ from aiohttp_apispec import (
 )
 from sqlalchemy import and_
 
-from app.game.session.models import GameSession
+from app.game.session.models import GameSession, SessionScores
 from app.game.session.schemas import (
     GameSessionSchema,
     GameSessionCreateSchema,
     GameSessionListSchema,
     GameSessionDeleteSchema,
+    SessionScoresSchema,
+    SessionScoresListSchema,
 )
 
 
@@ -23,7 +25,7 @@ class CreateGameSessionView(web.View):
     @json_schema(GameSessionCreateSchema)
     @response_schema(GameSessionSchema)
     async def post(self):
-        questions = list(range(7))
+        questions = self.request['json']["questions"]
         random.shuffle(questions)
         session = await GameSession.create(
             chat_id=self.request['json']["chat_id"],
@@ -66,3 +68,20 @@ class GameSessionListView(web.View):
             .gino.all()
         )
         return web.json_response(GameSessionSchema(many=True).dump(games))
+
+
+class SessionScoresListView(web.View):
+    @docs(tags=["game"], summary="Session scores list")
+    @querystring_schema(SessionScoresListSchema)
+    @response_schema(SessionScoresSchema(many=True))
+    async def get(self):
+        data = self.request["querystring"]
+
+        session_scores = (
+            await SessionScores.load()
+            .query.order_by(SessionScores.id)
+            .limit(data["limit"])
+            .offset(data["offset"])
+            .gino.all()
+        )
+        return web.json_response(SessionScoresSchema(many=True).dump(session_scores))
