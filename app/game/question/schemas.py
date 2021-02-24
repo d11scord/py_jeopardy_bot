@@ -13,6 +13,12 @@ class QuestionCreateSchema(Schema):
     title = fields.Str(required=True)
 
 
+class QuestionUpdateSchema(Schema):
+    id = fields.Int(required=True)
+    theme = fields.Str(required=True)
+    title = fields.Str(required=True)
+
+
 class QuestionDeleteSchema(Schema):
     id = fields.Int(required=True)
 

@@ -15,6 +15,13 @@ class AnswerCreateSchema(Schema):
     is_right = fields.Bool(required=True, default=False)
 
 
+class AnswerUpdateSchema(Schema):
+    id = fields.Int(required=True)
+    question_id = fields.Int(required=True)
+    title = fields.Str(required=True)
+    is_right = fields.Bool(required=True, default=False)
+
+
 class AnswerDeleteSchema(Schema):
     id = fields.Int(required=True)
 

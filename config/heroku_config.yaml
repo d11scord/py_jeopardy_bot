@@ -8,13 +8,13 @@ vk:
   v: 5.38
 rabbitmq:
   url: amqp://guest:guest@localhost/
-  queue_name: vkbot_test5
+  queue_name: vkbot_test11
 postgres:
-  database_url: postgres://postgres:@localhost/test_db
+  database_url: postgres://bot_admin:test_password@localhost/gametest1
   require_ssl: false
 database:
   host: localhost
   port: 5432
-  username: $PG_USER
-  password: $PG_PASSWORD
-  name: $DB
+  username: bot_admin
+  password: test_password
+  name: gametest1

@@ -7,7 +7,7 @@ from app.game.question.schemas import (
     QuestionSchema,
     QuestionListSchema,
     QuestionCreateSchema,
-    QuestionDeleteSchema,
+    QuestionDeleteSchema, QuestionUpdateSchema,
 )
 
 
@@ -23,11 +23,24 @@ class CreateQuestionView(web.View):
         return web.json_response(QuestionSchema().dump(question))
 
 
+class UpdateQuestionView(web.View):
+    @docs(tags=["question"], summary="Update question")
+    @json_schema(QuestionUpdateSchema)
+    @response_schema(QuestionSchema)
+    async def put(self):
+        question = await Question.get(self.request['json']["id"])
+        await question.update(
+            theme=self.request['json']["theme"],
+            title=self.request['json']["title"],
+        ).apply()
+        return web.json_response(QuestionSchema().dump(question))
+
+
 class DeleteQuestionView(web.View):
     @docs(tags=["question"], summary="Delete question")
     @json_schema(QuestionDeleteSchema)
     async def delete(self):
-        _ = await (
+        await (
             Question.delete
             .where(Question.id == self.request['json']["id"])
             .gino.status()

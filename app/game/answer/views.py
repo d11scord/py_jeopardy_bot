@@ -6,6 +6,7 @@ from app.game.answer.models import Answer
 from app.game.answer.schemas import (
     AnswerSchema,
     AnswerCreateSchema,
+    AnswerUpdateSchema,
     AnswerDeleteSchema,
     AnswerListSchema,
 )
@@ -24,11 +25,25 @@ class CreateAnswerView(web.View):
         return web.json_response(AnswerSchema().dump(answer))
 
 
+class UpdateAnswerView(web.View):
+    @docs(tags=["answer"], summary="Update answer")
+    @json_schema(AnswerUpdateSchema)
+    @response_schema(AnswerSchema)
+    async def put(self):
+        answer = await Answer.get(self.request['json']["id"])
+        await answer.update(
+            question_id=self.request['json']["question_id"],
+            title=self.request['json']["title"],
+            is_right=self.request['json']["is_right"],
+        ).apply()
+        return web.json_response(AnswerSchema().dump(answer))
+
+
 class DeleteAnswerView(web.View):
     @docs(tags=["answer"], summary="Delete answer")
     @json_schema(AnswerDeleteSchema)
     async def delete(self):
-        _ = await (
+        await (
             Answer.delete
             .where(Answer.id == self.request['json']["id"])
             .gino.status()
