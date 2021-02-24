@@ -1,5 +1,11 @@
 from aiohttp import web
-from aiohttp_apispec import docs, querystring_schema, response_schema, json_schema
+from aiohttp.web_exceptions import HTTPBadRequest
+from aiohttp_apispec import (
+    docs,
+    querystring_schema,
+    response_schema,
+    json_schema,
+)
 from sqlalchemy import and_
 
 from app.game.answer.models import Answer
@@ -31,25 +37,31 @@ class UpdateAnswerView(web.View):
     @response_schema(AnswerSchema)
     async def put(self):
         answer = await Answer.get(self.request['json']["id"])
-        await answer.update(
-            question_id=self.request['json']["question_id"],
-            title=self.request['json']["title"],
-            is_right=self.request['json']["is_right"],
-        ).apply()
-        return web.json_response(AnswerSchema().dump(answer))
+        if answer:
+            await answer.update(
+                question_id=self.request['json']["question_id"],
+                title=self.request['json']["title"],
+                is_right=self.request['json']["is_right"],
+            ).apply()
+            return web.json_response(AnswerSchema().dump(answer))
+        raise HTTPBadRequest(reason="no_such_record")
 
 
 class DeleteAnswerView(web.View):
     @docs(tags=["answer"], summary="Delete answer")
     @json_schema(AnswerDeleteSchema)
     async def delete(self):
-        await (
-            Answer.delete
-            .where(Answer.id == self.request['json']["id"])
-            .gino.status()
-        )
-        return web.json_response({}, status=204)
+        answer_id = self.request['json']["id"]
 
+        answer = await Answer.get(answer_id)
+        if answer:
+            await (
+                Answer.delete
+                .where(Answer.id == answer_id)
+                .gino.status()
+            )
+            return web.json_response({}, status=204)
+        raise HTTPBadRequest(reason="no_such_record")
 
 class AnswerListView(web.View):
     @docs(tags=["answer"], summary="Answers list")

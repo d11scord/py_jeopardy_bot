@@ -1,4 +1,4 @@
-"""drop title test
+"""drop title tests
 
 Revision ID: bb67223f70bf
 Revises: 46e2372472a3
@@ -29,7 +29,7 @@ def downgrade():
     sa.Column('question_id', sa.INTEGER(), autoincrement=False, nullable=False),
     sa.Column('title', sa.VARCHAR(length=45), autoincrement=False, nullable=False),
     sa.Column('is_right', sa.BOOLEAN(), autoincrement=False, nullable=False),
-    sa.Column('test', sa.VARCHAR(), autoincrement=False, nullable=False),
+    sa.Column('tests', sa.VARCHAR(), autoincrement=False, nullable=False),
     sa.ForeignKeyConstraint(['question_id'], ['questions.id'], name='answers_question_id_fkey'),
     sa.PrimaryKeyConstraint('id', name='answers_pkey')
     )

@@ -3,7 +3,7 @@ from marshmallow.validate import Range
 
 
 class AnswerSchema(Schema):
-    id = fields.Int()
+    # id = fields.Int()
     question_id = fields.Int()
     title = fields.Str()
     is_right = fields.Bool()

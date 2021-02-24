@@ -1,4 +1,5 @@
 from aiohttp import web
+from aiohttp.web_exceptions import HTTPBadRequest
 from aiohttp_apispec import docs, querystring_schema, response_schema, json_schema
 from sqlalchemy import and_
 
@@ -29,23 +30,30 @@ class UpdateQuestionView(web.View):
     @response_schema(QuestionSchema)
     async def put(self):
         question = await Question.get(self.request['json']["id"])
-        await question.update(
-            theme=self.request['json']["theme"],
-            title=self.request['json']["title"],
-        ).apply()
-        return web.json_response(QuestionSchema().dump(question))
+        if question:
+            await question.update(
+                theme=self.request['json']["theme"],
+                title=self.request['json']["title"],
+            ).apply()
+            return web.json_response(QuestionSchema().dump(question))
+        raise HTTPBadRequest(reason="no_such_record")
 
 
 class DeleteQuestionView(web.View):
     @docs(tags=["question"], summary="Delete question")
     @json_schema(QuestionDeleteSchema)
     async def delete(self):
-        await (
-            Question.delete
-            .where(Question.id == self.request['json']["id"])
-            .gino.status()
-        )
-        return web.json_response({}, status=204)
+        question_id = self.request['json']["id"]
+
+        question = await Question.get(question_id)
+        if question:
+            await (
+                Question.delete
+                .where(Question.id == question_id)
+                .gino.status()
+            )
+            return web.json_response({}, status=204)
+        raise HTTPBadRequest(reason="no_such_record")
 
 
 class QuestionListView(web.View):

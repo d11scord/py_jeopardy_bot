@@ -3,7 +3,7 @@ from marshmallow.validate import Range
 
 
 class GameSessionSchema(Schema):
-    id = fields.Int()
+    # id = fields.Int()
     chat_id = fields.Int()
     questions = fields.List(fields.Int)
     last_question_id = fields.Int()
@@ -26,7 +26,7 @@ class GameSessionListSchema(Schema):
 
 
 class SessionScoresSchema(Schema):
-    id = fields.Int()
+    # id = fields.Int()
     session_id = fields.Int()
     user_id = fields.Int()
     score = fields.Int()

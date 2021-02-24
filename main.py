@@ -3,6 +3,7 @@ import logging
 from aiohttp import web
 from aiohttp_apispec import setup_aiohttp_apispec, validation_middleware
 
+from app.base.base import error_middleware
 from app.settings import config
 from app.store.database.models import database_accessor
 
@@ -16,6 +17,7 @@ def setup_accessors(application: web.Application) -> None:
 
 
 def setup_middlewares(application: web.Application) -> None:
+    application.middlewares.append(error_middleware)
     application.middlewares.append(validation_middleware)
 
 

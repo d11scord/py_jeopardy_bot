@@ -1,6 +1,7 @@
 import random
 
 from aiohttp import web
+from aiohttp.web_exceptions import HTTPBadRequest
 from aiohttp_apispec import (
     docs,
     json_schema,
@@ -25,11 +26,9 @@ class CreateGameSessionView(web.View):
     @json_schema(GameSessionCreateSchema)
     @response_schema(GameSessionSchema)
     async def post(self):
-        questions = self.request['json']["questions"]
-        random.shuffle(questions)
         session = await GameSession.create(
             chat_id=self.request['json']["chat_id"],
-            questions=questions,
+            questions=self.request['json']["questions"],
             last_question_id=0,
             is_finished=False,
         )
@@ -40,12 +39,17 @@ class DeleteGameSessionView(web.View):
     @docs(tags=["game"], summary="Delete game session")
     @json_schema(GameSessionDeleteSchema)
     async def delete(self):
-        await (
-            GameSession.delete
-            .where(GameSession.id == self.request['json']["id"])
-            .gino.status()
-        )
-        return web.json_response({}, status=204)
+        game_id = self.request['json']["id"]
+
+        game = await GameSession.get(game_id)
+        if game:
+            await (
+                GameSession.delete
+                .where(GameSession.id == game_id)
+                .gino.status()
+            )
+            return web.json_response({}, status=204)
+        raise HTTPBadRequest(reason="no_such_record")
 
 
 class GameSessionListView(web.View):
@@ -57,7 +61,7 @@ class GameSessionListView(web.View):
         conditions = []
         # TODO: add user_id
         if data.get("chat_id"):
-            conditions.append(GameSession.user_id == data["chat_id"])
+            conditions.append(GameSession.chat_id == data["chat_id"])
 
         games = (
             await GameSession.load()
