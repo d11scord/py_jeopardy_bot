@@ -2,8 +2,9 @@ import asyncio
 from enum import Enum
 
 from sqlalchemy import and_
+from vk_api.keyboard import VkKeyboard
 
-from app.game.bot.keyboard_generator import generate_keyboard
+from app.game.bot.keyboard_generator import generate_answers_keyboard, generate_bot_commands_keyboard
 from app.game.bot.utils import (
     find_unfinished_game,
     generate_questions,
@@ -23,6 +24,7 @@ from app.store.database.models import (
 
 
 class Commands(Enum):
+    global_start = 'Начать'
     start_game = ['Начать игру']
     stop_game = ['Завершить игру']
     game_info = ['Об игре']
@@ -35,7 +37,7 @@ class JeopardyBot:
 
         self.score = 100  # баллы за правильный ответ
         self.delay = 60  # seconds
-        self.max_question = 3
+        self.max_question = 5
 
         self.template = \
             """
@@ -72,6 +74,7 @@ class JeopardyBot:
         # создаём юзера, если его нет ...
         users = list()
         response = await get_conversation_members(peer_id)
+        print(response)
         members = response['response']['profiles']
 
         for member in members:
@@ -125,7 +128,7 @@ class JeopardyBot:
                 *format_answers(answers)
             )
 
-            keyboard = generate_keyboard(format_answers(answers))
+            keyboard = generate_answers_keyboard(format_answers(answers))
             await send_message_to_vk(
                 game.chat_id, message, keyboard.get_keyboard())
 
@@ -221,7 +224,16 @@ class JeopardyBot:
             .order_by(GameSession.id.desc())
             .gino.first()
         )
+        if game is None:
+            message = 'В этом чате ещё не было игр.'
+            await send_message_to_vk(chat_id, message)
+            return
         response = await get_conversation_members(chat_id)
+        if 'error' in response:
+            print(response)
+            message = 'Проверьте права бота. У него должна быть роль "Администратор".'
+            await send_message_to_vk(chat_id, message)
+            return
         members = response['response']['profiles']
         result = f"Игра № {game.id}"
         for member in members:
@@ -236,18 +248,17 @@ class JeopardyBot:
             result += f"\n{member['first_name']} {member['last_name']}: {session_score.score}"
         await send_message_to_vk(chat_id, result)
 
-    @staticmethod
-    async def bot_info(chat_id: int):
+    async def bot_info(self, chat_id: int, keyboard: VkKeyboard = None):
         bot_name = f"@{config['vk']['bot_name']}"
         message = \
         f"""
-        Привет. Я СвояИгра Бот. Умею играть в "Свою Игру".
+        Привет. Я СвояИгра Бот. Умею играть в «Свою Игру».
         Ко мне обращайся только через тэг {bot_name}. Другие сообщения я не читаю.
-        Для начала игры добавь меня в беседу и напиши "{bot_name} {'/'.join(Commands.start_game.value)}".
-        Далее правила простые — я задаю вопрос, вы отвечаете. Кто первым правильно ответит на вопрос, получит на свой счёт очки. Если отвечаешь неправильно, очки с твоего счёта списываются и ты теряешь право отвечачть на этот вопрос. Если за 1 минуту никто не ответит на вопрос, я дам вам правильный ответ и задам следующий. Игра состоит из 10 вопросов. Победит тот, кто наберёт наибольшее количество очков.
-        Для досрочного завершения игры напиши "{bot_name} {'/'.join(Commands.stop_game.value)}". Для получения ифнормации о текущей или последней игре напиши "{bot_name} {'/'.join(Commands.start_game.value)}". Если хочешь посмотреть на промежуточные баллы, пиши "{bot_name} {' ,'.join(Commands.bot_info.value)}" Общее количество твоих баллов — "{bot_name} {'/'.join(Commands.my_scores.value)}".
+        Для начала игры добавь меня в беседу, сделай администратором и напиши «{bot_name} {'/'.join(Commands.start_game.value)}».
+        Далее правила простые — я задаю вопрос, вы отвечаете. Кто первым правильно ответит на вопрос, получит на свой счёт очки. Если отвечаешь неправильно, очки с твоего счёта списываются. Если за {self.delay} секунд никто не ответит на вопрос, я дам вам правильный ответ и задам следующий. Игра состоит из {self.max_question} вопросов. Победит тот, кто наберёт наибольшее количество очков.
+        Для досрочного завершения игры напиши «{bot_name} {'/'.join(Commands.stop_game.value)}». Для получения ифнормации о текущей или последней игре напиши «{bot_name} {'/'.join(Commands.start_game.value)}». Если хочешь посмотреть на промежуточные баллы, пиши «{bot_name} {' ,'.join(Commands.bot_info.value)}» Общее количество твоих баллов — «{bot_name} {'/'.join(Commands.my_scores.value)}».
         """
-        await send_message_to_vk(chat_id, message)
+        await send_message_to_vk(chat_id, message, keyboard)
 
     @staticmethod
     async def personal_score(peer_id: int, user_id: int):
@@ -300,6 +311,11 @@ class JeopardyBot:
             await self.bot_info(chat_id)
         elif message_text in Commands.my_scores.value:
             await self.personal_score(chat_id, user_id)
+        elif message_text == Commands.global_start.value:
+            await self.bot_info(
+                chat_id,
+                generate_bot_commands_keyboard().get_keyboard(),
+            )
         elif message['answer'] is not None:
             await self.receive_answer(chat_id, user_id, message['answer'])
         else:

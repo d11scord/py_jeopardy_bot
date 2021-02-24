@@ -1,7 +1,7 @@
 import aiohttp
 from vk_api import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll
-from vk_api.keyboard import VkKeyboard, VkKeyboardColor
+from vk_api.keyboard import VkKeyboard
 from vk_api.utils import get_random_id
 
 from app.settings import config
