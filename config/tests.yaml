@@ -1,11 +1,19 @@
 common:
   port: 8002
+vk:
+  access_token: a9e03943cc4fe9eff891268442c0a528632b8713ae234aef6ba21e097a4e0488560dc64f7432214b5aee7
+  group_id: 202491367
+  v: 5.38
+  bot_name: py_jeopardy_bot
+rabbitmq:
+  url: amqp://guest:guest@localhost/
+  queue_name: vkbot_test11
 postgres:
-  database_url: postgres://postgres:postgres@localhost/test_jeopardy
+  database_url: postgres://bot_admin:test_password@localhost/test_jeopardy
   require_ssl: false
 database:
   host: localhost
   port: 5432
-  username: postgres
-  password: postgres
+  username: bot_admin
+  password: test_password
   name: test_jeopardy

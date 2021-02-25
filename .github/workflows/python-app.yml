@@ -33,18 +33,18 @@ jobs:
 #    - name: Code style
 #      run: |
 #        black --check --diff .
-#    - name: Test with pytest
-#      env:
-#        CONFIG_PATH: config/tests.yaml
-#      run: |
-#        alembic upgrade head
-#        pytest
+    - name: Test with pytest
+      env:
+        CONFIG_PATH: config/tests.yaml
+      run: |
+        alembic upgrade head
+        pytest
     - name: Heroku deploy
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
       run: |
         heroku container:login
-        heroku container:push -a jeopardy-vk web --arg PROCESS_TYPE=web
-        heroku container:push -a jeopardy-vk worker --arg PROCESS_TYPE=worker
-        heroku container:push -a jeopardy-vk worker --arg PROCESS_TYPE=longpoll
-        heroku container:release -a jeopardy-vk web worker
+        heroku container:push -a py-jeopardy web --arg PROCESS_TYPE=web
+        heroku container:push -a py-jeopardy worker --arg PROCESS_TYPE=worker
+        heroku container:push -a py-jeopardy worker --arg PROCESS_TYPE=longpoll
+        heroku container:release -a py-jeopardy web worker

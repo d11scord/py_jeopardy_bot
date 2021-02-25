@@ -18,7 +18,12 @@ longpoll = VkBotLongPoll(
     vk_session, group_id=group_id,
 )
 
-session = aiohttp.ClientSession()
+
+async def create_session():
+    return aiohttp.ClientSession()
+
+
+session = create_session()
 
 
 async def send_message_to_vk(
