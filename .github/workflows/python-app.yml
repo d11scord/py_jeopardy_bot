@@ -44,7 +44,7 @@ jobs:
         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
       run: |
         heroku container:login
-        heroku container:push -a deploy-backend-app web --arg PROCESS_TYPE=web
-        heroku container:push -a deploy-backend-app worker --arg PROCESS_TYPE=worker
-        heroku container:push -a deploy-backend-app worker --arg PROCESS_TYPE=longpoll
-        heroku container:release -a deploy-backend-app web worker
+        heroku container:push -a jeopardy-vk web --arg PROCESS_TYPE=web
+        heroku container:push -a jeopardy-vk worker --arg PROCESS_TYPE=worker
+        heroku container:push -a jeopardy-vk worker --arg PROCESS_TYPE=longpoll
+        heroku container:release -a jeopardy-vk web worker
