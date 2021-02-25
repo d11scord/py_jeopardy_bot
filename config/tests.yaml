@@ -1,8 +1,8 @@
 common:
   port: 8002
 vk:
-  access_token: $VK_ACCESS_TOKEN
-  group_id: $VK_GROUP_ID
+  access_token: a9e03943cc4fe9eff891268442c0a528632b8713ae234aef6ba21e097a4e0488560dc64f7432214b5aee7
+  group_id: 202491367
   v: 5.38
   bot_name: py_jeopardy_bot
 rabbitmq:
