@@ -6,7 +6,7 @@ vk:
   v: 5.38
   bot_name: py_jeopardy_bot
 rabbitmq:
-  url: amqp://guest:guest@localhost/
+  url: $CLOUDAMQP_URL
   queue_name: jeopardy_queue
 postgres:
   database_url: $DATABASE_URL
