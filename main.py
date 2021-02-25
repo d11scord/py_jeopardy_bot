@@ -58,7 +58,7 @@ def create_app() -> web.Application:
     setup_middlewares(application)
     setup_routes(application)
     setup_external_libraries(application)
-    # setup_logging(application)
+    setup_logging(application)
 
     return application
 

@@ -2,6 +2,7 @@ import asyncio
 from enum import Enum
 
 from sqlalchemy import and_
+from sqlalchemy.engine.url import URL
 from vk_api.keyboard import VkKeyboard
 
 from app.game.bot.keyboard_generator import generate_answers_keyboard, generate_bot_commands_keyboard
@@ -49,15 +50,27 @@ class JeopardyBot:
             c. {}
             d. {}
             """
+        self.setup()
 
-        # todo: костыль?
+    def setup(self):
         asyncio.get_event_loop().run_until_complete(self.connect())
 
     @staticmethod
     async def connect():
         from app.store.database.models import db
 
-        await db.set_bind(config['postgres']['database_url'])
+        await db.set_bind(
+            URL(
+                drivername="asyncpg",
+                username=config["database"]["username"],
+                password=config["database"]["password"],
+                host=config["database"]["host"],
+                port=config["database"]["port"],
+                database=config["database"]["name"],
+            ),
+            min_size=1,
+            max_size=1,
+        )
         await db.gino.create_all()
 
     async def create_game(self, chat_id: int) -> GameSession:
