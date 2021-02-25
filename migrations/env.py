@@ -1,10 +1,11 @@
+import sys
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 
-
+sys.path = ['', '..'] + sys.path[1:]
 from app.settings import config as app_config
 
 # this is the Alembic Config object, which provides

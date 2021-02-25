@@ -60,21 +60,24 @@ class JeopardyBot:
         await db.set_bind(config['postgres']['database_url'])
         await db.gino.create_all()
 
-    async def create_game(self, peer_id: int) -> GameSession:
+    async def create_game(self, chat_id: int) -> GameSession:
         # рандомим вопросы для игры и создаём новую сессию
         questions = await generate_questions(self.max_question)
         # берём айдишники вопросов
         questions = [q.id for q in questions]
         new_game_session = await GameSession.create(
-            chat_id=peer_id,
+            chat_id=chat_id,
             questions=questions,
             last_question_id=0,
             is_finished=False,
         )
         # создаём юзера, если его нет ...
         users = list()
-        response = await get_conversation_members(peer_id)
-        print(response)
+        response = await get_conversation_members(chat_id)
+        if 'error' in response:
+            print(response)
+            message = 'Проверьте права бота. У него должна быть роль "Администратор".'
+            await send_message_to_vk(chat_id, message)
         members = response['response']['profiles']
 
         for member in members:
@@ -97,7 +100,7 @@ class JeopardyBot:
             )
 
         message = f"Ок, начинаем сессию номер {new_game_session.id}."
-        await send_message_to_vk(peer_id, message=message)
+        await send_message_to_vk(chat_id, message=message)
         return new_game_session
 
     async def play_game(self, game: GameSession):
