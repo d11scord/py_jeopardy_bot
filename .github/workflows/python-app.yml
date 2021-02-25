@@ -35,6 +35,8 @@ jobs:
 #        black --check --diff .
     - name: Test with pytest
       env:
+        VK_ACCESS_TOKEN: ${{ secrets.VK_ACCESS_TOKEN }}
+        VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
         CONFIG_PATH: config/tests.yaml
       run: |
         alembic upgrade head
