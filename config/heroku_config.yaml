@@ -9,11 +9,11 @@ rabbitmq:
   url: amqp://guest:guest@localhost/
   queue_name: jeopardy_queue
 postgres:
-  database_url: postgres://postgres:postgres@$DATABASE_HOST/jeopardy
+  database_url: $DATABASE_URL
   require_ssl: true
 database:
   host: $DATABASE_HOST
-  port: 5432
-  username: postgres
-  password: postgres
-  name: jeopardy
+  port: $DATABASE_PORT
+  username: $DATABASE_USER
+  password: $DATABASE_PASSWORD
+  name: $DATABASE_NAME
