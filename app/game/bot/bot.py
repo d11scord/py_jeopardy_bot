@@ -74,10 +74,7 @@ class JeopardyBot:
         # создаём юзера, если его нет ...
         users = list()
         response = await get_conversation_members(chat_id)
-        if 'error' in response:
-            print(response)
-            message = 'Проверьте права бота. У него должна быть роль "Администратор".'
-            await send_message_to_vk(chat_id, message)
+        # TODO: тут бага!
         members = response['response']['profiles']
 
         for member in members:
