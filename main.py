@@ -1,4 +1,5 @@
 import logging
+from argparse import ArgumentParser
 
 from aiohttp import web
 from aiohttp_apispec import setup_aiohttp_apispec, validation_middleware
@@ -6,6 +7,8 @@ from aiohttp_apispec import setup_aiohttp_apispec, validation_middleware
 from app.base.base import error_middleware
 from app.settings import config
 from app.store.database.models import database_accessor
+from app.vk.longpoll import run_longpoll
+from app.worker.worker import run_worker
 
 
 def setup_config(application: web.Application) -> None:
@@ -61,6 +64,15 @@ def create_app() -> web.Application:
 
 
 if __name__ == "__main__":
-    app = create_app()
-    print('Run app')
-    web.run_app(app, port=config["common"]["port"])
+    arg_parser = ArgumentParser(description="specify running service")
+    arg_parser.add_argument(
+        "service", help="web or worker or longpoll", default="web", type=str
+    )
+    args = arg_parser.parse_args()
+    if args.service == "worker":
+        run_worker()
+    elif args.service == "longpoll":
+        run_longpoll()
+    else:
+        app = create_app()
+        web.run_app(app, port=config["common"]["port"])

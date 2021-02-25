@@ -18,6 +18,8 @@ longpoll = VkBotLongPoll(
     vk_session, group_id=group_id,
 )
 
+session = aiohttp.ClientSession()
+
 
 async def send_message_to_vk(
     peer_id: int,
@@ -33,14 +35,13 @@ async def send_message_to_vk(
 
 
 async def get_conversation_members(peer_id: int) -> dict:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            url=f"https://api.vk.com/method/"
-                f"messages.getConversationMembers?"
-                f"peer_id={peer_id}&"
-                f"access_token={token}&"
-                f"v={v}&"
-                f"group_id={group_id}",
-        ) as resp:
-            response = await resp.json()
+    async with session.get(
+        url=f"https://api.vk.com/method/"
+            f"messages.getConversationMembers?"
+            f"peer_id={peer_id}&"
+            f"access_token={token}&"
+            f"v={v}&"
+            f"group_id={group_id}",
+    ) as resp:
+        response = await resp.json()
     return response

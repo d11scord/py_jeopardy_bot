@@ -30,14 +30,21 @@ async def connect_to_queue(loop):
     return channel, queue
 
 
-async def main(loop):
+async def listen(loop):
     print(' [x] Perform connection')
     channel, queue = await connect_to_queue(loop)
     await queue.consume(on_message, no_ack=False)
 
 
-if __name__ == "__main__":
+def run_worker():
     loop = asyncio.get_event_loop()
-    loop.create_task(main(loop))
+    loop.create_task(listen(loop))
     print(" [*] Waiting for messages. To exit press CTRL+C")
-    loop.run_forever()
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        print("exit from worker")
+
+
+if __name__ == "__main__":
+    run_worker()

@@ -1,5 +1,6 @@
 #!/bin/bash
 cat config/heroku_config.yaml | envsubst > config/config.yaml
-# необходимо для того, чтобы alembic смог найти наше приложение
-export PYTHONPATH=.
-python main.py
+
+echo STARTING "$1"
+alembic upgrade head
+python main.py "$1"

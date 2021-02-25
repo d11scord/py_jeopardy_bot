@@ -1,14 +1,11 @@
 common:
   port: 8002
-rabbitmq:
-  url: amqp://guest:guest@localhost/
-  queue_name: vkbot_test_test1
 postgres:
-  database_url: postgres://bot_admin:test_password@localhost/test_jeopardy
+  database_url: postgres://postgres:postgres@localhost/test_jeopardy
   require_ssl: false
 database:
   host: localhost
   port: 5432
-  username: bot_admin
-  password: test_password
+  username: postgres
+  password: postgres
   name: test_jeopardy

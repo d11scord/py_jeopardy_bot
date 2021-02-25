@@ -38,7 +38,7 @@ def parse_event(raw_event: VkBotMessageEvent) -> json:
     return json.dumps(event)
 
 
-async def main(loop):
+async def listen(loop):
     channel, queue = await connect_to_queue(loop)
 
     for event in longpoll.listen():
@@ -55,8 +55,15 @@ async def main(loop):
             print('Event type', event.type.value, event)
 
 
-if __name__ == '__main__':
+def run_longpoll():
     loop = asyncio.get_event_loop()
-    loop.create_task(main(loop))
+    loop.create_task(listen(loop))
     print('Hello from vk bot longpoll')
-    loop.run_forever()
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        print("exit from longpoll")
+
+
+if __name__ == '__main__':
+    run_longpoll()

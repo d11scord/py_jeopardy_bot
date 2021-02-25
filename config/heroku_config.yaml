@@ -1,20 +1,19 @@
 common:
-  # каждый раз heroku выделяет разные порты,
-  # поэтому необходимо вынести это в переменную
   port: $PORT
 vk:
   access_token: $VK_ACCESS_TOKEN
   group_id: $VK_GROUP_ID
   v: 5.38
+  bot_name: py_jeopardy_bot
 rabbitmq:
   url: amqp://guest:guest@localhost/
-  queue_name: vkbot_test11
+  queue_name: jeopardy_queue
 postgres:
-  database_url: postgres://bot_admin:test_password@localhost/gametest1
+  database_url: postgres://postgres:postgres@localhost/jeopardy
   require_ssl: false
 database:
   host: localhost
   port: 5432
-  username: bot_admin
-  password: test_password
-  name: gametest1
+  username: postgres
+  password: postgres
+  name: jeopardy

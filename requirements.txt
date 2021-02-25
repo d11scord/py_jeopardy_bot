@@ -26,7 +26,6 @@ multidict==5.1.0
 packaging==20.9
 pamqp==2.3.0
 pika==1.2.0
-pkg-resources==0.0.0
 pluggy==0.13.1
 psycopg2-binary==2.8.6
 py==1.10.0
