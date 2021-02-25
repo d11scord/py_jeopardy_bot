@@ -16,8 +16,8 @@ class PostgresAccessor:
         application.on_cleanup.append(self._on_disconnect)
 
     async def _on_connect(self, application: web.Application):
-        # from app.store.database.models import db
-        #
+        from app.store.database.models import db
+
         # self.config = application["config"]["postgres"]
         # if self.config["require_ssl"]:
         #     ctx = ssl.create_default_context(cafile="")
@@ -26,7 +26,7 @@ class PostgresAccessor:
         #     await db.set_bind(self.config["database_url"], ssl=ctx)
         # else:
         #     await db.set_bind(self.config["database_url"])
-        # self.db = db
+        self.db = db
         await self.db.set_bind(
             URL(
                 drivername="asyncpg",
