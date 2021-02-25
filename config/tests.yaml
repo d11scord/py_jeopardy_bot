@@ -9,11 +9,11 @@ rabbitmq:
   url: amqp://guest:guest@localhost/
   queue_name: vkbot_test11
 postgres:
-  database_url: postgres://bot_admin:test_password@localhost/test_jeopardy
+  database_url: postgres://postgres:password@localhost/test_jeopardy
   require_ssl: false
 database:
   host: localhost
   port: 5432
-  username: bot_admin
-  password: test_password
+  username: postgres
+  password: password
   name: test_jeopardy
