@@ -1,16 +1,16 @@
 version: '3.7'
 services:
   db:
-    image: postgres:13.2
+    image: postgres
     restart: always
     environment:
       POSTGRES_USER: bot_admin
       POSTGRES_PASSWORD: test_password
-      POSTGRES_DB: gametest1
+      POSTGRES_DB: gametest2
     ports:
       - 5432:5432
-    volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+#    volumes:
+#      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   rabbit:
     image: rabbitmq:3.8-alpine

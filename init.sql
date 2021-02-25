@@ -1,1 +1,1 @@
-CREATE DATABASE gametest1;
+CREATE DATABASE gametest2;
