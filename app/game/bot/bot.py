@@ -5,13 +5,16 @@ from sqlalchemy import and_
 from sqlalchemy.engine.url import URL
 from vk_api.keyboard import VkKeyboard
 
-from app.game.bot.keyboard_generator import generate_answers_keyboard, generate_bot_commands_keyboard
+from app.game.bot.keyboard_generator import (
+    generate_answers_keyboard,
+    generate_bot_commands_keyboard,
+)
 from app.game.bot.utils import (
     find_unfinished_game,
     generate_questions,
     get_question_by_id,
     get_answers_by_question_id,
-    format_answers, get_user_scores, get_game_scores,
+    format_answers, get_user_scores, get_game_scores, is_bot_admin,
 )
 from app.settings import config
 from app.vk.accessor import send_message_to_vk, get_conversation_members
@@ -87,7 +90,6 @@ class JeopardyBot:
         # создаём юзера, если его нет ...
         users = list()
         response = await get_conversation_members(chat_id)
-        # TODO: тут бага!
         members = response['response']['profiles']
 
         for member in members:
@@ -231,6 +233,8 @@ class JeopardyBot:
 
     @staticmethod
     async def game_info(chat_id):
+        if not await is_bot_admin(chat_id):
+            return
         game = await (
             GameSession.query
             .where(GameSession.chat_id == chat_id)
@@ -241,24 +245,18 @@ class JeopardyBot:
             message = 'В этом чате ещё не было игр.'
             await send_message_to_vk(chat_id, message)
             return
-        response = await get_conversation_members(chat_id)
-        if 'error' in response:
-            print(response)
-            message = 'Проверьте права бота. У него должна быть роль "Администратор".'
-            await send_message_to_vk(chat_id, message)
-            return
-        members = response['response']['profiles']
         result = f"Игра № {game.id}"
-        for member in members:
-            session_score = await (
-                SessionScores.load()
-                .query.where(and_(
-                    (SessionScores.session_id == game.id),
-                    (SessionScores.user_id == member['id'])
-                ))
-                .gino.first()
-            )
-            result += f"\n{member['first_name']} {member['last_name']}: {session_score.score}"
+        session_scores = await (
+            SessionScores.load()
+            .query.where(and_(
+                (SessionScores.session_id == game.id),
+            ))
+            .order_by(SessionScores.score.desc())
+            .gino.all()
+        )
+        for score in session_scores:
+            user = await User.get(score.user_id)
+            result += f"\n{user.firstname} {user.lastname}: {score.score}"
         await send_message_to_vk(chat_id, result)
 
     async def bot_info(self, chat_id: int, keyboard: VkKeyboard = None):
@@ -308,16 +306,18 @@ class JeopardyBot:
         chat_id = message['peer_id']
 
         if message_text in Commands.start_game.value:
-            game = await find_unfinished_game(chat_id)
-            if not game:
-                game = await self.create_game(chat_id)
-            await self.play_game(game)
+            if await is_bot_admin(chat_id):
+                game = await find_unfinished_game(chat_id)
+                if not game:
+                    game = await self.create_game(chat_id)
+                await self.play_game(game)
         elif message_text in Commands.stop_game.value:
-            game = await find_unfinished_game(chat_id)
-            if game:
-                await self.stop_game(game)
-            else:
-                await send_message_to_vk(chat_id, 'Нет незавершённой игры.')
+            if await is_bot_admin(chat_id):
+                game = await find_unfinished_game(chat_id)
+                if game:
+                    await self.stop_game(game)
+                else:
+                    await send_message_to_vk(chat_id, 'Нет незавершённой игры.')
         elif message_text in Commands.game_info.value:
             await self.game_info(chat_id)
         elif message_text in Commands.bot_info.value:

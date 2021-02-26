@@ -8,6 +8,7 @@ from app.store.database.models import (
     GameSession,
     SessionScores,
 )
+from app.vk.accessor import get_conversation_members, send_message_to_vk
 
 
 async def find_unfinished_game(chat_id: int) -> Union[GameSession, None]:
@@ -64,3 +65,13 @@ async def get_game_scores(game_id: int) -> List[SessionScores]:
 def format_answers(answers: List[Answer]) -> List[str]:
     formatted_answers = [a.title for a in answers]
     return formatted_answers
+
+
+async def is_bot_admin(chat_id: int) -> bool:
+    response = await get_conversation_members(chat_id)
+    if 'error' in response:
+        print(response)
+        message = 'Проверьте права бота. У него должна быть роль "Администратор".'
+        await send_message_to_vk(chat_id, message)
+        return False
+    return True

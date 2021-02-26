@@ -8,9 +8,6 @@ vk:
 rabbitmq:
   url: $CLOUDAMQP_URL
   queue_name: jeopardy_queue
-postgres:
-  database_url: $DATABASE_URL
-  require_ssl: true
 database:
   host: $DATABASE_HOST
   port: $DATABASE_PORT
